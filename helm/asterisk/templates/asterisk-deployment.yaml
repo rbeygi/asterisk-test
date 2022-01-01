@@ -1,0 +1,112 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asterisk
+  labels:
+    app: asterisk
+spec:
+  replicas: { { .Values.replicaCount } }
+  selector:
+    matchLabels:
+      app: asterisk
+  template:
+    metadata:
+      labels:
+        app: asterisk
+    spec:
+      containers:
+        - name: asterisk
+          image: hibou/asterisk:13
+          env:
+            - name: DOMAIN
+              valueFrom:
+                configMapKeyRef:
+                  name: asterisk-configmap
+                  key: DOMAIN
+
+            - name: MYSQL_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: asterisk-configmap
+                  key: MYSQL_DB
+
+            - name: MYSQL_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: asterisk-configmap
+                  key: MYSQL_USER
+
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                configMapKeyRef:
+                  name: asterisk-configmap
+                  key: MYSQL_PASSWORD
+
+            - name: LANG
+              valueFrom:
+                secretKeyRef:
+                  name: asterisk-secret
+                  key: LANG
+
+            - name: LC_ALL
+              valueFrom:
+                secretKeyRef:
+                  name: asterisk-secret
+                  key: LC_ALL
+
+            - name: LANGUAGE
+              valueFrom:
+                secretKeyRef:
+                  name: asterisk-secret
+                  key: LANGUAGE
+
+            - name: TZ
+              valueFrom:
+                configMapKeyRef:
+                  name: asterisk-configmap
+                  key: TZ
+          ports:
+            - containerPort: 5060
+            - containerPort: 8088
+            - containerPort: 8089
+          volumeMounts:
+            - name: asterisk-config
+              mountPath: /etc/asterisk
+            - name: asterisk-data
+              mountPath: /var/lib/asterisk
+            - name: asterisk-spool
+              mountPath: /var/spool/asteris
+      volumes:
+        - name: asterisk-config
+          hostPath:
+            path: /data/astrisk/config
+        - name: asterisk-data
+          hostPath:
+            path: /data/astrisk/data
+        - name: asterisk-spool
+          hostPath:
+            path: /data/astrisk/spool
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: asterisk-service
+spec:
+  type: NodePort
+  selector:
+    app: asterisk
+  ports:
+    - protocol: TCP
+      port: 5060
+      targetPort: 5060
+    - protocol: UDP
+      port: 5060
+      targetPort: 5060
+    - protocol: TCP
+      port: 8088
+      targetPort: 8088      
+    - protocol: TCP
+      port: 8089
+      targetPort: 8089
+      

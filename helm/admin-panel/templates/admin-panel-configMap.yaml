@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: admin-panel-configmap
+data:
+  APACHE_DOCUMENT_ROOT: "/var/www/html"
+  MYSQL_ROOT_PASSWORD: "testest"

@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: customer-panel
+  labels:
+    app: customer-panel
+spec:
+  replicas: { { .Values.replicaCount } }
+  selector:
+    matchLabels:
+      app: customer-panel
+  template:
+    metadata:
+      labels:
+        app: customer-panel
+    spec:
+      containers:
+        - name: customer-panel
+          image: php72-apache
+          env:
+            - name: APACHE_DOCUMENT_ROOT
+              valueFrom:
+                configMapKeyRef:
+                  name: customer-panel-configmap
+                  key: APACHE_DOCUMENT_ROOT
+
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                configMapKeyRef:
+                  name: customer-panel-configmap
+                  key: MYSQL_ROOT_PASSWORD
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: customer-panel-config
+              mountPath: /var/www/html
+            - name: customer-panel-data
+              mountPath: /usr/local/etc/php/php.ini
+            - name: customer-panel-spool
+              mountPath: /etc/apache2/sites-enabled
+      volumes:
+        - name: customer-panel-config
+          hostPath:
+            path: ./customer
+        - name: customer-panel-data
+          hostPath:
+            path: ./config/php/php.ini
+        - name: customer-panel-spool
+          hostPath:
+            path: ./config/vhosts
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: customer-panel-service
+spec:
+  type: NodePort
+  selector:
+    app: customer-panel
+  ports:
+    - protocol: TCP
+      port: 8081
+      targetPort: 80
+
+      

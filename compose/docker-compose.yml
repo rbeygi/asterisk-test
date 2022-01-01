@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  reverse-proxy:
+    image: traefik:v2.5
+    command: --api.insecure=true --providers.docker
+    ports:
+      - 80:80
+      - 8080:8080
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  asterisk:
+    image: hibou/asterisk:13
+    ports:
+      - 5060:5060/udp
+      - 5060:5060/tcp
+      - 10000-10099:10000-10099/udp
+      - 8088:8088
+      - 8089:8089
+    environment:
+      - DOMAIN=asterisk.docker.local
+      - MYSQL_DB=asterisk
+      - MYSQL_USER=asterisk
+      - MYSQL_PASSWORD=asterisk
+      - LANG=ru_RU.utf8
+      - LC_ALL=ru_RU.utf8
+      - LANGUAGE=ru_RU.utf8
+      - TZ=Asia/Tehran
+    volumes:
+      - ./asterisk/config:/etc/asterisk
+      - ./asterisk/data:/var/lib/asterisk
+      - ./asterisk/data-spool:/var/spool/asterisk
+    depends_on:
+      - db
+    networks:
+      default:
+        ipv4_address: 10.3.2.1
+
+  admin-panel:
+    image: php72-apache
+    container_name: admin-panel
+    restart: always
+    ports:
+      - 8081:80
+    links: 
+      - database
+    volumes: 
+      - ./admin:/var/www/html
+      - ./config/php/php.ini:/usr/local/etc/php/php.ini
+      - ./config/vhosts:/etc/apache2/sites-enabled
+    environment:
+      - APACHE_DOCUMENT_ROOT=/var/www/html
+      - MYSQL_ROOT_PASSWORD=testest
+    labels:
+      - 'traefik.http.routers.dev-core.rule=Host(`admin.docker.local`)'
+      - 'traefik.http.services.dev-core.loadbalancer.server.port=8081'
+
+  customer-panel:
+    image: php72-apache
+    container_name: customer-panel
+    restart: always
+    ports:
+      - 8082:80
+    links: 
+      - database
+    volumes: 
+      - ./admin:/var/www/html
+      - ./config/php/php.ini:/usr/local/etc/php/php.ini
+      - ./config/vhosts:/etc/apache2/sites-enabled
+    environment:
+      - APACHE_DOCUMENT_ROOT=/var/www/html
+      - MYSQL_ROOT_PASSWORD=testest
+    labels:
+      - 'traefik.http.routers.dev-core.rule=Host(`customer.docker.local`)'
+      - 'traefik.http.services.dev-core.loadbalancer.server.port=8082'
+
+  db:
+    image: mysql
+    container_name: mysql
+    restart: always
+    ports:
+      - 3306:3306
+    volumes: 
+      - ./data/mysql:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=testest
+      - MYSQL_DATABASE=astrisk
+      - MYSQL_USER=astrisk
+      - MYSQL_PASSWORD=astrisk

@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin-panel
+  labels:
+    app: admin-panel
+spec:
+  replicas: { { .Values.replicaCount } }
+  selector:
+    matchLabels:
+      app: admin-panel
+  template:
+    metadata:
+      labels:
+        app: admin-panel
+    spec:
+      containers:
+        - name: admin-panel
+          image: php72-apache
+          env:
+            - name: APACHE_DOCUMENT_ROOT
+              valueFrom:
+                configMapKeyRef:
+                  name: admin-panel-configmap
+                  key: APACHE_DOCUMENT_ROOT
+
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                configMapKeyRef:
+                  name: admin-panel-configmap
+                  key: MYSQL_ROOT_PASSWORD
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: admin-panel-config
+              mountPath: /var/www/html
+            - name: admin-panel-data
+              mountPath: /usr/local/etc/php/php.ini
+            - name: admin-panel-spool
+              mountPath: /etc/apache2/sites-enabled
+      volumes:
+        - name: admin-panel-config
+          hostPath:
+            path: ./admin
+        - name: admin-panel-data
+          hostPath:
+            path: ./config/php/php.ini
+        - name: admin-panel-spool
+          hostPath:
+            path: ./config/vhosts
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin-panel-service
+spec:
+  type: NodePort
+  selector:
+    app: admin-panel
+  ports:
+    - protocol: TCP
+      port: 8081
+      targetPort: 80
+
+      
